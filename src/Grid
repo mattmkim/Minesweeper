@@ -1,0 +1,574 @@
+
+import java.awt.*;
+import java.awt.event.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.LinkedList;
+import java.util.TreeSet;
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+@SuppressWarnings("serial")
+public class Grid extends JPanel {
+	
+	private Space[][] grid;
+	private int rows;
+	private int columns; 
+	private int numMines;
+	private int numMinesFlagged;
+	private int numNumsRevealed;
+	private int timeElapsed; 
+	private String username;
+	public boolean won;
+	public boolean lost;
+	private JLabel minesLeft;
+	private JLabel timeLeft;
+	
+	private Timer timer = new Timer(1000, new ActionListener() {
+		public void actionPerformed(ActionEvent e) {
+            incTime();
+        }
+	});
+	
+	
+	public void mouseListener() {
+		this.addMouseListener(new MouseListener() {
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				int x = e.getX();
+				int x1 = (int) (x / rescale());
+				int y = e.getY();
+				int y1 = (int) (y / rescale());
+				
+				if (SwingUtilities.isLeftMouseButton(e)) {
+					try {
+						leftClick(y1, x1);
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+				}
+				
+				else if (SwingUtilities.isRightMouseButton(e)) {
+					rightClick(y1, x1);
+				}
+				
+			}
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				
+			}
+
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				
+			}
+		});
+	}
+	
+	public int getTimeElapsed() {
+		return this.timeElapsed;
+	}
+
+	public int getRows() {
+		return this.rows;
+	}
+	
+	public int getColumns() {
+		return this.columns;
+	}
+	
+	public int totalSpaces() {
+		return (this.rows * this.columns);
+	}
+	
+	public int getNumMines() {
+		return this.numMines;
+	}
+	
+	public int getNumMinesFlagged() {
+		return this.numMinesFlagged;
+	}
+	
+	public Space getSpace(int row, int col) {
+		return this.grid[row][col];
+	}
+	
+	public void incNumMinesFlagged() {
+		this.numMinesFlagged++;
+	}
+	
+	public void decNumMinesFlagged() {
+		this.numMinesFlagged--;
+	}
+	
+	public void incNumNumsRevealed() {
+		this.numNumsRevealed++;
+	}
+	
+	public void incTime() {
+		this.timeElapsed++;
+		this.updateTime();
+	}
+	
+	
+	// Scale the grid so all the spaces will fit
+	public int rescale() {
+		if (this.getRows() < 16) {
+			return 40;
+		}
+		if (this.getRows() < 32) {
+			return 25;
+		}
+		return 20;
+	}
+	
+	public void updateMines() {
+		int minesRemaining = this.numMines - this.numMinesFlagged;
+		this.minesLeft.setText("Mines Left: " + minesRemaining);
+	}
+	
+	public void updateTime() {
+		this.timeLeft.setText("Time Elapsed: " + getTimeElapsed());
+	}
+	
+	public Grid(JLabel minesLeft, JLabel timeLeft, int numMines, int rows, int columns) {
+		this.grid = new Space[rows][columns];
+		this.rows = rows;
+		this.columns = columns;
+		this.numMines = numMines;
+		this.minesLeft = minesLeft;
+		this.timeLeft = timeLeft;
+		this.timeElapsed = 0;
+		this.updateTime();
+		this.updateMines();
+		this.mouseListener();
+		this.requestFocus();
+    }
+	
+    // Update interval for timer, in milliseconds
+    public static final int INTERVAL = 1000;
+
+    /**
+     * (Re-)set the game to its initial state.
+     */
+    public void reset() {
+        this.grid = new Space[this.getRows()][this.getColumns()];
+        this.timeElapsed = 0;
+        this.numMinesFlagged = 0;
+        this.numNumsRevealed = 0;
+        this.timer.stop();
+        this.updateMines();
+        this.updateTime();
+        this.repaint();
+    }
+    
+    public void reset1(int row, int col, int mines) {
+    	this.grid = new Space[row][col];
+    	this.numMines = mines;
+    	this.numMinesFlagged = 0;
+        this.numNumsRevealed = 0;
+        this.timeElapsed = 0;
+        this.timer.stop();
+        this.updateMines();
+        this.updateTime();
+        this.repaint();
+    }
+        
+    // Helper method to determine the number of mines surrounding a number
+    public int getNumMinesAroundNum(int row, int col) {
+    	int num = 0;
+    	Map<Integer, TreeSet<Integer>> surroundings = new TreeMap<Integer, TreeSet<Integer>>();
+    	for (int i = Math.max(0, row - 1); i <= Math.min(row + 1, this.getRows() - 1); i++) {
+    		for (int j = Math.max(0, col - 1); j <= Math.min(col + 1, this.getColumns() - 1); j++) {
+    			if (surroundings.containsKey(i)) {
+    				surroundings.get(i).add(j);
+    			}
+    			else {
+    				TreeSet<Integer> values = new TreeSet<Integer>();
+    				values.add(j);
+    				surroundings.put(i, values);
+    			}
+    			
+    		}
+    	}
+    	
+    	surroundings.get(row).remove(col);
+    	for (Map.Entry<Integer, TreeSet<Integer>> location: surroundings.entrySet()) {
+    		for (Integer i: location.getValue()) {
+    			Space s = this.grid[location.getKey()][i];
+    			if (s != null && s instanceof Mine) {
+    				num = num +1;
+    			}
+    		}
+    		
+    	}
+    	return num;
+    }
+    
+    // If space that is clicked has no mines surrounding it, reveals other spaces that also do not have mines surrounding them
+    public void revealNonMines(int row, int col) throws IOException {
+    	Map<Integer, TreeSet<Integer>> surroundings = new TreeMap<Integer, TreeSet<Integer>>();
+    	for (int i = Math.max(0, row - 1); i <= Math.min(row + 1, this.getRows() - 1); i++) {
+    		for (int j = Math.max(0, col - 1); j <= Math.min(col + 1, this.getColumns() - 1); j++) {
+    			if (surroundings.containsKey(i)) {
+    				surroundings.get(i).add(j);
+    			}
+    			else {
+    				TreeSet<Integer> values = new TreeSet<Integer>();
+    				values.add(j);
+    				surroundings.put(i, values);
+    			}
+    		}
+    	}
+    	
+    	surroundings.get(row).remove(col);
+    	for (Map.Entry<Integer, TreeSet<Integer>> location: surroundings.entrySet()) {
+    		for (Integer i: location.getValue()) {
+    			Space s = this.getSpace(location.getKey(), i);
+    			if (s.isHidden() == true && s.isMine() == false) {
+        			s.leftClick();
+        		}
+    		}
+
+    	}
+    
+    }
+    
+    // First click cannot be a mine; place the mines/numbers on the board after the first click
+    public void leftClick(int row, int col) throws IOException {
+    	if (row >= 0 && row < this.getRows() && col >= 0 && col < this.getColumns()) {
+    		Space s = this.grid[row][col];
+    		if (s == null) {
+    			int numMinesPlaced = 0;
+    	    	Map<Integer, TreeSet<Integer>> mineLocations = new TreeMap<Integer, TreeSet<Integer>>();
+    			for (int i = 0; i < this.getRows(); i++) {
+    				for (int j = 0; j < this.getColumns(); j++) {
+    					if (!(i >= (Math.max(0, row - 1)) && i <= (Math.min(row + 1, this.getRows() - 1)) && j >= (Math.max(0, col - 1)) &&
+    							j <= (Math.min(col + 1, this.getColumns() - 1)))) {
+    						if (mineLocations.containsKey(i)) {
+    		    				mineLocations.get(i).add(j);
+    		    			}
+    		    			else {
+    		    				TreeSet<Integer> values = new TreeSet<Integer>();
+    		    				values.add(j);
+    		    				mineLocations.put(i, values);
+    		    			}
+
+    					}
+    					
+    				}
+    			}
+    			
+    			// Place mines in random locations
+    			
+
+    			while (numMinesPlaced < this.numMines) {
+    				int size = 0;
+        			for (Map.Entry<Integer, TreeSet<Integer>> location: mineLocations.entrySet()) {
+        				size += location.getValue().size();
+        			}
+        			int indLocation = (int) Math.floor(Math.random() * size);
+        			int ind = 0;
+        			search: {
+        				for (Map.Entry<Integer, TreeSet<Integer>> location: mineLocations.entrySet()) {
+            				for (Integer i: location.getValue()) {
+            					if (indLocation == ind) {
+            						grid[location.getKey()][i] = new Mine(this, location.getKey(), i);
+            						mineLocations.get(location.getKey()).remove(i);
+            						break search;
+            					}
+            					else {
+            						ind++;
+            					}
+            				}
+            				
+            			}
+        			}
+        			
+					numMinesPlaced++;
+        			
+    			}
+    			
+    			// Add numbers to Boxes 
+    			for (int i = 0; i < this.getRows(); i++) {
+    				for (int j = 0; j < this.getColumns(); j++) {
+    					Space num = this.grid[i][j];
+    					if (num == null) {
+    						grid[i][j] = new Number(this, i, j);
+    					}
+    				}
+    			}
+    			
+    			s = this.grid[row][col];
+    			this.timer.start();
+        		s.leftClick();
+
+    		}
+    		else {
+    			s.leftClick();
+    		}
+    		
+    	}
+    }
+    
+    public void rightClick(int row, int col) {
+    	if (row >= 0 && row < this.getRows() && col >= 0 && col < this.getColumns()) {
+    		Space s = this.grid[row][col];
+    		if (s != null) {
+    			s.rightClick();
+    		}
+    	}
+    }
+    
+    public boolean won() {
+    	if (this.totalSpaces() - this.numMines == this.numNumsRevealed) {
+    		return true;
+    	}
+    	
+    	else {
+    		return false;
+    	}
+    }
+    
+    // Handled in Number class
+    public void userWon() throws IOException {
+    	// Reveals the whole board
+    	for (int i = 0; i < this.getRows(); i++) {
+    		for (int j = 0; j < this.getColumns(); j++) {
+    			Space s = this.grid[i][j];
+    			s.reveal();
+    		}
+    	}
+    	
+    	this.timer.stop();    	
+    	
+    	if (this.getRows() == 9 && this.getColumns() == 9 && this.numMines == 10 && this.isHighScore()) {
+    		JPanel usernamePanel = new JPanel();
+    		JTextField usernameField = new JTextField(20);
+    		usernamePanel.add(new JLabel("You won and have gotten a new high score! Please enter a nickname!"));
+    		usernamePanel.add(usernameField);
+    		
+    		boolean reprompt = true;
+    		while (reprompt) {
+        		int result = JOptionPane.showConfirmDialog(null, usernamePanel, "Enter a nickname", JOptionPane.OK_CANCEL_OPTION);
+        		if (result == JOptionPane.OK_OPTION) {
+        			String username = usernameField.getText();
+        				
+        			if (username == null || username.length() > 20 || username.length() < 1) {
+        				JFrame error = new JFrame();
+        				JOptionPane.showMessageDialog(error, "Invalid username. Please enter a new username.", "Invalid Username", JOptionPane.INFORMATION_MESSAGE);
+        				
+        			}
+        			else {
+        				reprompt = false;
+        				this.username = username;
+        				this.writeHighScores();
+        		    	
+        			}
+        		
+        		}
+    		
+    		}
+    	}
+        else {
+        	JPanel again = new JPanel();
+        	again.add(new JLabel("You Won! Would you like to play again?"));
+        	int replay = JOptionPane.showConfirmDialog(null, again, "Play Again?", JOptionPane.YES_NO_OPTION);
+        	if (replay == JOptionPane.YES_OPTION) {
+        		this.reset();
+        			
+        	}
+        	else {
+        		System.exit(0);
+        	}
+        		
+        	}
+    	
+    		
+    	this.repaint();
+    	
+    	
+    }
+    
+    // handled in Mine class
+    public void userLost() {
+    	// reveal all spaces
+    	for (int i = 0; i < this.getRows(); i++) {
+    		for (int j = 0; j < this.getColumns(); j++) {
+    			Space s = this.grid[i][j];
+    			s.reveal();
+    		}
+    	}
+    	
+    	this.timer.stop();
+    	this.repaint();
+    	
+    	// reate a panel that shows the user his or her time and asks if he or she wants to play again. if the user wants 
+    	// to play again, is given the same panel as when the game is first started
+    	
+    	JPanel again = new JPanel();
+    	again.add(new JLabel("You Lost! Would you like to play again?"));
+    	int replay = JOptionPane.showConfirmDialog(null, again, "Play Again?", JOptionPane.YES_NO_OPTION);
+    		if (replay == JOptionPane.YES_OPTION) {
+    			this.reset();
+    			
+    		}
+    		else {
+    			System.exit(0);
+    		}
+    	
+    }
+    // Helper to read image files
+ 	public static Image readImage(String image) {
+ 		Image img = null;
+ 		
+ 		try {
+ 			img = ImageIO.read(new File(image));
+ 		} catch (IOException e) {
+ 			e.getMessage();
+ 		}
+ 		
+ 		return img;
+ 		
+ 	}
+ 	
+ 	// High scores: will only take 3 high scores
+ 	
+ 	public String score() {
+ 		return this.username + ":" + this.timeElapsed;
+ 	}
+ 	
+ 	public boolean isHighScore() throws IOException {
+ 		boolean x = true;
+ 		List<Integer> scores = valueHighScores(readHighScores());
+ 		if (scores.size() < 3) {
+ 			return x;
+ 		}
+ 		
+ 		return this.timeElapsed < scores.get(2);
+ 		
+ 	}
+ 	
+ 	public static List<Integer> valueHighScores(List<String> strings) {
+ 		List<Integer> values = new LinkedList<Integer>();
+ 		for (String s: strings) {
+			int i = s.indexOf(":");
+			Integer score = Integer.parseInt(s.substring(i + 1));
+			values.add(score);
+			
+		}
+ 		
+ 		return values;
+ 	}
+ 	
+ 	
+ 	public static List<String> readHighScores() throws IOException {
+ 		List<String> highs = new LinkedList<String>();
+ 		BufferedReader r = new BufferedReader(new FileReader("files/scores.txt"));
+ 		try {
+ 			String line;
+ 			while ((line = r.readLine()) != null) {
+ 				highs.add(line);
+ 			}
+ 			
+ 		} catch (IOException e) {
+ 			e.getMessage();
+ 			
+ 		} finally {
+ 			r.close();
+ 		}
+ 		return highs;
+ 	}
+ 	
+ 	public List<String> newHighScores() throws IOException {
+ 		List<String> score_strings = Grid.readHighScores();
+ 		if (score_strings.size() == 0) {
+ 			score_strings.add(this.score());
+ 		}
+ 		
+ 		else {
+ 			int ind = 0;
+ 	 		List<Integer> score_values = valueHighScores(readHighScores());
+ 	 		for (int i: score_values) {
+ 	 			if (this.timeElapsed >= i) {
+ 	 				ind++;
+ 	 			}
+ 	 			else {
+ 	 				break;
+ 	 			}
+ 	 		}
+ 	 		if (ind <= score_strings.size()) {
+ 	 			 score_strings.add(ind, this.score());
+ 	 			 if (score_strings.size() > 3) {
+ 	 				 for (int i = score_strings.size() - 1; i > 2; i--) {
+ 	 					score_strings.remove(i);
+ 	 				 }
+ 	 				 
+ 	 			 }
+ 	 			 
+ 	 		 }
+ 		}
+ 		
+ 		return score_strings;
+ 	}
+ 	
+ 	private void writeHighScores() throws IOException {
+ 		List<String> strings = newHighScores();
+ 		PrintWriter writer = new PrintWriter("files/scores.txt");
+ 		for (String s: strings) {
+ 			writer.println(s);
+ 			
+ 		}
+ 		writer.close();
+ 	}
+ 	
+ 	
+ 	static final String LOCATION =
+            "files/";
+
+	@Override
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        for (int i = 0; i < this.getRows(); i++) {
+        	for (int j = 0; j < this.getColumns(); j++) {
+        		Space s = grid[i][j];
+        		if (s == null) {
+        			int x = j * rescale();
+        			int y = i * rescale();
+        			g.drawImage(readImage(LOCATION + "hidden.png"), x, y, rescale(), rescale(), null);
+        		}
+        		else {
+        			s.draw(g);
+        		}   		
+        	}
+        }
+
+    }
+
+	@Override
+	public Dimension getPreferredSize() {
+		return new Dimension(this.getColumns() * rescale(), this.getRows() * rescale());
+	}
+ 
+    
+}
+    
+    
