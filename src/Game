@@ -1,0 +1,209 @@
+
+import java.awt.*;
+import java.awt.event.*;
+import java.io.IOException;
+
+import javax.swing.*;
+import java.util.List;
+
+
+public class Game implements Runnable {
+    public void run() {
+
+        final JFrame frame = new JFrame("Minesweeper");
+        frame.setLocation(300, 300);
+               
+        // Status panel
+        final JPanel status_panel = new JPanel();
+        final JPanel mines_panel = new JPanel();
+        final JPanel time_panel = new JPanel();
+        final JPanel result_panel = new JPanel();
+        frame.add(status_panel, BorderLayout.SOUTH);
+        final JLabel mines = new JLabel("Mines Left: ");
+        final JLabel time = new JLabel("Time Elapsed: 0");
+        mines_panel.add(mines);
+        time_panel.add(time);
+        status_panel.add(mines_panel, BorderLayout.WEST);
+        status_panel.add(Box.createHorizontalStrut(30));
+        status_panel.add(result_panel, BorderLayout.CENTER);
+        status_panel.add(time_panel, BorderLayout.EAST);
+
+        
+
+        // Ask user for number of rows, columns, and mines
+        JPanel difficulty = new JPanel();
+        JTextField rowText = new JTextField(2);
+        JTextField columnText = new JTextField(2);
+        JTextField mineText = new JTextField(2);
+        difficulty.add(new JLabel("How many rows?  "));
+        difficulty.add(rowText);
+        difficulty.add(new JLabel("How many columns?  "));
+        difficulty.add(columnText);
+        difficulty.add(new JLabel("How many mines?  "));
+        difficulty.add(mineText);
+        
+        int rows = 0;
+        int columns = 0;
+        int mine = 0;
+        boolean reprompt = true;
+        
+        // Ensures that user gives valid input
+        while (reprompt) {
+        	int response = JOptionPane.showConfirmDialog(frame, difficulty, "Difficulty", JOptionPane.OK_CANCEL_OPTION);
+            if (response == JOptionPane.OK_OPTION) {
+
+            	try {
+                	rows = Integer.parseInt(rowText.getText());
+                    columns = Integer.parseInt(columnText.getText());
+                    mine = Integer.parseInt(mineText.getText());
+               	} catch (NumberFormatException e) {
+                	JOptionPane.showMessageDialog(frame, "Please only input integers", "Invalid input", JOptionPane.ERROR_MESSAGE);
+                }
+            
+            	if (rows < 4 || rows > 40) {
+            		JOptionPane.showMessageDialog(frame, "Invalid number of rows", "Invalid input", JOptionPane.ERROR_MESSAGE);
+            	}
+            	else if (columns < 4 || columns > 40) {
+            		JOptionPane.showMessageDialog(frame, "Invalid number of columns", "Invalid input", JOptionPane.ERROR_MESSAGE);	
+            	}
+            	else if (mine == 0 || (rows - 1) * (columns - 1) < mine) {
+            		JOptionPane.showMessageDialog(frame, "Invalid number of mines", "Invalid input", JOptionPane.ERROR_MESSAGE);
+            	}
+            	else {
+            		reprompt = false;
+            	}
+
+            }
+            else {
+            	System.exit(0);
+            }
+        }
+        
+        
+        
+        // Grid Panel
+        final JPanel gridPanel = new JPanel();
+        final Grid grid = new Grid(mines, time, mine, rows, columns);
+        gridPanel.add(grid);
+        frame.add(gridPanel, BorderLayout.CENTER);
+        
+        // Reset button
+        final JPanel control_panel = new JPanel();
+        frame.add(control_panel, BorderLayout.NORTH);
+        
+        final JButton reset = new JButton("Reset");
+        reset.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                grid.reset();
+            }
+        });
+        control_panel.add(reset);
+        
+        final JButton instructions = new JButton("Instructions");
+        instructions.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		final JFrame ins = new JFrame("Instructions");
+        		ins.setLocation(frame.getMousePosition());
+
+        		final JLabel text = new JLabel(
+        			"<html><div style='text-align: center;'><span style='font-size:20px'>Instructions<br><br></span><body>Try to reveal all the spaces that do not contain mines!<br> "
+        			+ "The number that appears in the space is equal to the number<br>"
+        			+ "of mines that it is touching. If you think that a space contains<br>"
+        			+ "a mine, right click it to place a flag to mark it. You can also<br>"
+        			+ "right click a flagged space to place a question mark if you are<br> "
+        			+ "unsure if the space has a mine. If you reveal all the spaces with no mines,<br>"
+        			+ "you win! If you click on a space that has a mine, you lose. "
+        			+ "<br><br>"
+        			+ "If you want to try and go for a high score, create a board with<br>"
+        			+ " 9 rows, 9 columns, and 10 mines. Good luck!</body></div></html>"
+        		);
+        		
+        		JPanel playPanel = new JPanel();
+        		JButton play = new JButton("Play");
+        		play.addActionListener(new ActionListener() {
+        			public void actionPerformed(ActionEvent e) {
+        				ins.dispose();
+        			}
+        		});
+        		
+        		ins.add(text);
+        		playPanel.add(play);
+        		ins.add(playPanel, BorderLayout.SOUTH);
+        		ins.pack();
+        		ins.setVisible(true);
+        	}        	
+        	
+        });
+        
+        control_panel.add(instructions);
+        
+        final JButton highscoreList = new JButton("Highscores");
+        highscoreList.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		final JFrame highs = new JFrame("Highscores");
+        		highs.setLocation(frame.getMousePosition());
+        		final JPanel highscores = new JPanel();
+        		final JLabel scores = new JLabel(displayHighScores());
+        		highscores.add(scores);
+        		
+        		JPanel playPanel = new JPanel();
+        		JButton play = new JButton("Play");
+        		play.addActionListener(new ActionListener() {
+        			public void actionPerformed(ActionEvent e) {
+        				highs.dispose();
+        			}
+        		});
+        		
+        		playPanel.add(play);
+        		highs.add(highscores, BorderLayout.CENTER);
+        		highs.add(playPanel, BorderLayout.SOUTH);
+        		highs.setPreferredSize(new Dimension(250,250));
+        		highs.pack();
+        		highs.setVisible(true);
+        	}
+        	
+        });
+        
+        control_panel.add(highscoreList);
+       
+        frame.pack();
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+    }
+    
+    private static String displayHighScores() {
+    	String text = "<html><div style='text-align: center;'><span style='font-size:20px'> High Scores </span>"
+    			+ "<br><br><body>";
+    	int place = 1;
+    	
+    	try {
+    		List<String> highscores = Grid.readHighScores();
+        	for (String s: highscores) {
+        		int i = s.indexOf(":");
+        		text += place + ". " + s.substring(0, i) + ": " + s.substring(i + 1, s.length()) + " seconds<br>";
+        		place++;
+        	}
+        	
+        	int ind = highscores.size();
+        	if (highscores.size() < 3) {
+        		for (int i = ind; i < 3; i++) {
+        			text += "---------<br>";
+        		}
+        	}
+    	} catch (IOException e) {
+    		e.getMessage();
+    	}
+    	
+    	text += "</body></div></html>";
+    	return text;
+    	
+    } 
+
+    /**
+     * Main method run to start and run the game. Initializes the GUI elements specified in Game and
+     * runs it. IMPORTANT: Do NOT delete! You MUST include this in your final submission.
+     */
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Game());
+    }
+}
