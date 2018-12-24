@@ -1,0 +1,111 @@
+import java.awt.Graphics;
+import java.awt.Image;
+import java.io.File;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
+
+public class Number extends Space implements Comparable<Space> {
+	
+	private final int numMines;
+	
+	public Number(Grid grid, int row, int col) {
+		super(grid, row, col);
+		this.numMines = grid.getNumMinesAroundNum(row, col);
+	
+	}
+	
+	public void leftClick() throws IOException {
+		if (this.isHidden()) {
+			this.reveal();
+			this.grid.incNumNumsRevealed();
+			if (this.grid.won()) {
+				this.grid.userWon();
+			}
+			
+			if (this.numMines == 0) {
+				this.grid.revealNonMines(this.getRow(), this.getColumn());
+			}
+		}
+		
+		this.paint();
+	}
+
+	
+		// helper to read image files
+		public static Image readImage(String image) {
+			Image img = null;
+			
+			try {
+				img = ImageIO.read(new File(image));
+			} catch (IOException e) {
+				e.getMessage();
+			}
+			
+			return img;
+			
+		}
+		
+	static final String LOCATION = "files/";
+
+	public void draw(Graphics g) {
+		int x = this.getColumn() * grid.rescale();
+		int y = this.getRow() * grid.rescale();
+		
+		if (this.isHidden()) {
+			g.drawImage(readImage(LOCATION + "hidden.png"), x, y, grid.rescale(), grid.rescale(),null);
+		}
+		
+		else if (this.isFlagged()) {
+			g.drawImage(readImage(LOCATION + "flag.png"), x, y, grid.rescale(), grid.rescale(),null);
+		}
+		
+		else if (this.isUnsure()) {
+			g.drawImage(readImage(LOCATION + "unsure.png"), x, y, grid.rescale(), grid.rescale(),null);
+		}
+		
+		else if (this.isRevealed()) {
+			if (this.numMines == 0) {
+				g.drawImage(readImage(LOCATION + "revealed.png"), x, y, grid.rescale(), grid.rescale(), null);
+			}
+			else if (this.numMines == 1) {
+				g.drawImage(readImage(LOCATION + "1.png"), x, y, grid.rescale(), grid.rescale(),null);
+			}
+			else if (this.numMines == 2) {
+				g.drawImage(readImage(LOCATION + "2.png"), x, y, grid.rescale(), grid.rescale(),null);
+			}
+			else if (this.numMines == 3) {
+				g.drawImage(readImage(LOCATION + "3.png"), x, y, grid.rescale(), grid.rescale(),null);
+			}
+			else if (this.numMines == 4) {
+				g.drawImage(readImage(LOCATION + "4.png"), x, y, grid.rescale(), grid.rescale(),null);			
+			}
+			else if (this.numMines == 5) {
+				g.drawImage(readImage(LOCATION + "5.png"), x, y, grid.rescale(), grid.rescale(),null);
+			}
+			else if (this.numMines == 6) {
+				g.drawImage(readImage(LOCATION + "6.png"), x, y, grid.rescale(), grid.rescale(),null);
+			}
+			else if (this.numMines == 7) {
+				g.drawImage(readImage(LOCATION + "7.png"), x, y, grid.rescale(), grid.rescale(),null);
+			}
+			else {
+				g.drawImage(readImage(LOCATION + "8.png"), x, y, grid.rescale(), grid.rescale(),null);
+			}
+		}
+	}
+
+	@Override
+	public int compareTo(Space o) {
+		return super.compareTo(o);
+	}
+
+	@Override
+	public String toString() {
+		return "Number [toString()=" + super.toString() + "]";
+	}
+	
+	
+	
+	
+}	
