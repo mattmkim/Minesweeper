@@ -1,0 +1,65 @@
+import java.awt.*;
+import java.io.File;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
+
+public class Mine extends Space implements Comparable<Space> {
+	
+	public Mine (Grid grid, int row, int col) {
+		super(grid, row, col);
+	}
+	
+	public void leftClick() {
+		this.reveal();
+		this.grid.userLost();
+		this.paint();
+	}
+	
+	// helper to read image files
+	public static Image readImage(String image) {
+		Image img = null;
+		
+		try {
+			img = ImageIO.read(new File(image));
+		} catch (IOException e) {
+			e.getMessage();
+		}
+		
+		return img;
+		
+	}
+	
+	static final String LOCATION = "files/";
+	
+	public void draw(Graphics g) {
+		int x = this.getColumn() * grid.rescale();
+		int y = this.getRow() * grid.rescale();
+		
+		if (this.isHidden()) {
+			g.drawImage(readImage(LOCATION + "hidden.png"), x, y, grid.rescale(), grid.rescale(), null);
+		}
+		else if (this.isFlagged()) {
+			g.drawImage(readImage(LOCATION + "flag.png"), x, y, grid.rescale(), grid.rescale(), null);
+		}
+		else if (this.isUnsure()) {
+			g.drawImage(readImage(LOCATION + "unsure.png"), x, y, grid.rescale(), grid.rescale(), null);
+		}
+		else if (this.isRevealed()) {
+			g.drawImage(readImage(LOCATION + "bomb.png"), x, y, grid.rescale(), grid.rescale(), null);
+		}
+		
+	}
+
+	@Override
+	public int compareTo(Space o) {
+		return super.compareTo(o);
+	}
+
+	@Override
+	public String toString() {
+		return "Mine [toString()=" + super.toString() + "]";
+	}
+	
+	
+}
