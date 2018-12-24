@@ -1,0 +1,117 @@
+import java.awt.*;
+import java.io.IOException;
+
+
+public abstract class Space implements Comparable<Space> {
+	
+	protected final Grid grid;
+	private int row;
+	private int col;
+	private boolean mine;
+	private boolean hidden;
+	private boolean revealed;
+	private boolean flagged;
+	private boolean unsure;
+	
+	
+	public Space(Grid grid, int row, int col) {
+		this.grid = grid;
+		this.row = row;
+		this.col = col;
+		this.hidden = true;
+		this.revealed = false;
+		this.flagged = false;
+		this.unsure = false;
+		
+	}
+	
+	public int getRow() {
+		return this.row;
+	}
+	
+	public int getColumn() {
+		return this.col;
+	}
+	
+	public boolean isMine() {
+		return this.mine == true;
+	}
+	
+	public boolean isHidden() {
+		return this.hidden == true;
+	}
+	
+	public boolean isRevealed() {
+		return this.revealed == true;
+	}
+	
+	public boolean isFlagged() {
+		return this.flagged == true;
+	}
+	
+	public boolean isUnsure() {
+		return this.unsure == true;
+	}
+	
+	public void reveal() {
+		this.hidden = false;
+		this.flagged = false;
+		this.unsure = false;
+		this.revealed = true;
+	}
+	
+	public abstract void leftClick() throws IOException;
+	
+	public void rightClick() {
+		if (this.hidden == true) {
+			this.hidden = false;
+			this.flagged = true;
+			this.grid.incNumMinesFlagged();
+			this.grid.updateMines();
+			this.paint();
+		}
+		
+		else if (this.flagged == true) {
+			this.flagged = false;
+			this.unsure = true;
+			this.grid.decNumMinesFlagged();
+			this.grid.updateMines();
+			this.paint();
+		}
+		
+		else if (this.unsure == true) {
+			this.unsure = false;
+			this.hidden = true;
+			this.paint();
+		}
+		
+		else if (this.revealed == true) {
+			return;
+		}
+		
+		this.paint();
+		
+	}
+
+	abstract public void draw(Graphics g);
+	
+	public void paint() {
+		Graphics g = grid.getGraphics();
+		this.draw(g);
+	}
+
+
+	
+	@Override
+	public int compareTo(Space o) {
+		return 0;
+	}
+
+	@Override
+	public String toString() {
+		return "Space [toString()=" + super.toString() + "]";
+	}
+
+	
+	
+}
